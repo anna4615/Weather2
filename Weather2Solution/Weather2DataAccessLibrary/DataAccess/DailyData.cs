@@ -10,7 +10,8 @@ namespace Weather2DataAccessLibrary.DataAccess
         public double? AverageTemperature { get; set; }
         public double? AverageHumidity { get; set; }
         public double? FungusRisk { get; set; }
-        public int NumberOfRecords { get; set; }
+        public int NumberOfTemperatureRecords { get; set; }
+        public int NumberOfHumidityRecords { get; set; }
 
 
         public override string ToString()
@@ -21,18 +22,20 @@ namespace Weather2DataAccessLibrary.DataAccess
                 $"{Math.Round((double)AverageTemperature, 1)}\t\t" :
                 $"data saknas\t";
 
+            printString += NumberOfTemperatureRecords + "\t\t\t";
+
             printString += AverageHumidity != null ?
                 $"{Math.Round((double)AverageHumidity)}\t\t" :
                 $"data saknas\t";
 
-            if (FungusRisk < 0)
+            if (FungusRisk <= 0)
                 printString += "Obefintlig risk\t\t";
             else if (FungusRisk != null)
                 printString += $"{Math.Round((double)FungusRisk)}\t\t\t";
             else if (FungusRisk == null)
                 printString += $"Kan inte beräknas\t";
 
-            printString += NumberOfRecords;
+            printString += NumberOfHumidityRecords;
 
             return printString;
         }

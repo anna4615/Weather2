@@ -41,22 +41,24 @@ namespace Weather2ConsoleApp
             //PrintSensors();
             //Console.WriteLine("\n");
 
+            //DateTime date = new DateTime(2016, 11, 18);
+            //int sensorId = 6;
 
-            DateTime date = new DateTime(2016, 11, 10);
-            int sensorId = 6;
+            //PrintDataForDay(date, sensorId);
+            //Console.WriteLine();
+            //Console.WriteLine();
 
-            PrintDataForDay(date, sensorId);
-            Console.WriteLine();
-            Console.WriteLine();
+            //PrintSortedList(sensorId, (AccessMethods.Sortingselection)1);
 
-            PrintSortedList(sensorId, (AccessMethods.Sortingselection)3);
+            DateTime autumnDate = AccessMethods.GetFirstAutumnDay(6);
+            Console.WriteLine($"Höst blev det {autumnDate.ToShortDateString()}");
+            
 
 
 
         }
 
-
-
+       
 
         static void PrintSensors()
         {
@@ -76,12 +78,10 @@ namespace Weather2ConsoleApp
             }
         }
 
-
-
-
         static void PrintDataForDay(DateTime date, int id)
         {
-            (DailyData dailyData, int numberOfRecords) = AccessMethods.GetDataForSensorByDay(date, id);
+            (DailyData dailyData, int numberOfTemperatureRecords, int numberOfHumidityRecords) =
+             AccessMethods.GetDataForSensorByDay(date, id);
 
             Sensor sensor = AccessMethods.GetSensor(id);
 
@@ -90,7 +90,7 @@ namespace Weather2ConsoleApp
                 Console.WriteLine($"Det finns ingen sensor med Id {id}.");
             }
 
-            else if (numberOfRecords == 0)
+            else if (numberOfTemperatureRecords == 0 && numberOfHumidityRecords == 0)
             {
                 Console.WriteLine($"Det finns inga data från {date.ToShortDateString()} för sensor \"{sensor.SensorName}\".");
             }
@@ -100,7 +100,7 @@ namespace Weather2ConsoleApp
                 string heading = $"Dygnsmedelvärden från sensor \"{sensor.SensorName}\" för valt datum";
                 Console.WriteLine($"{heading}\n{Utils.GetUnderline(heading)}\n");
 
-                Console.WriteLine($"Datum\t\tTemperatur (C)\tFuktighet (%)\tMögelrisk (%)\t\tAntal avläsningar");
+                Console.WriteLine($"Datum\t\tTemperatur (C)\tAntal avläsningar\tFuktighet (%)\tMögelrisk (%)\t\tAntal avläsningar");
                 Console.WriteLine(dailyData);
             }
         }
@@ -150,13 +150,12 @@ namespace Weather2ConsoleApp
             if (dailyData.Count != 0)
             {
                 Console.WriteLine($"Visar resultat för {dailyData.Count} valda dygn. Tryck på valfri tangent för att avsluta.\n");
-                Console.WriteLine($"Datum\t\tTemperatur (C)\tFuktighet (%)\tMögelrisk (%)\t\tAntal avläsningar");
+                Console.WriteLine($"Datum\t\tTemperatur (C)\tAntal avläsningar\tFuktighet (%)\tMögelrisk (%)\t\tAntal avläsningar");
                 Console.WriteLine(string.Join(Environment.NewLine, dailyData));
                 Console.WriteLine();
                 Console.WriteLine($"Visar resultat för {dailyData.Count} valda dygn. Tryck på valfri tangent för att avsluta.\n");
                 Utils.ScrollToTop(dailyData.Count + 15);
             }
         }
-
     }
 }
