@@ -29,11 +29,11 @@ namespace Weather2DataAccessLibrary.DataAccess
                 $"data saknas\t";
 
             if (FungusRisk <= 0)
-                printString += "Obefintlig risk\t\t";
-            else if (FungusRisk != null)
-                printString += $"{Math.Round((double)FungusRisk)}\t\t\t";
+                printString += "Obetydlig risk\t\t";
             else if (FungusRisk == null)
                 printString += $"Kan inte beräknas\t";
+            else
+                printString += $"{Math.Round((double)FungusRisk)}\t\t\t";
 
             printString += NumberOfHumidityRecords;
 

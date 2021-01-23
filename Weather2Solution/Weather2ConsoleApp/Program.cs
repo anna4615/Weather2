@@ -10,54 +10,66 @@ namespace Weather2ConsoleApp
     {
         static void Main(string[] args)
         {
-            //double temp = 23.4;
-            //int hum = 96;
+            List<Record> r = AccessMethods.GetRecordsForSensor(3);
+            PrintRecords(r);
 
-            //Console.WriteLine($"Temp: {temp}\tFukt: {hum}\tMögelrisk: {CalculateFungusRisk(temp, hum)}%");
-
-            //List<Record> r = AccessMethods.GetRecordsForSensor(3);
-            //PrintRecords(r);
-
-            //string[] fileContent = File.ReadAllLines("TemperaturData.txt");
+            string[] fileContent = File.ReadAllLines("TemperaturData.txt");
             //string[] fileContent = File.ReadAllLines("TestData.txt");
 
-            //Console.WriteLine("Skapar sensorer...");
-            //int newSensors = AccessMethods.CreateSensors(fileContent);
+            Console.WriteLine("Skapar sensorer...");
+            int newSensors = AccessMethods.CreateSensors(fileContent);
 
-            //Console.WriteLine(newSensors != 0 ? $"{newSensors} nya sensorer skapades i databasen." :
-            //                                     "Sensorer finns redan i databasen");
-            //Console.WriteLine();
-            //Console.WriteLine("Alla sensorer med antal avläsningar:");
-            //PrintSensors();
-            //Console.WriteLine("\n");
+            Console.WriteLine(newSensors != 0 ? $"{newSensors} nya sensorer skapades i databasen." :
+                                                 "Sensorer finns redan i databasen");
+            Console.WriteLine();
+            Console.WriteLine("Alla sensorer med antal avläsningar:");
+            PrintSensors();
+            Console.WriteLine("\n");
 
-            //Console.WriteLine("Laddar upp data...");
-            //int newRecords = AccessMethods.LoadData(fileContent);
-            //Console.WriteLine(newRecords != 0 ? $"{newRecords} nya avläsningar registrerades." :
-            //                                     "Avläsningarna finns redan i databasen");
-            //Console.WriteLine();
-            //Console.WriteLine();
+            Console.WriteLine("Laddar upp data...");
+            int newRecords = AccessMethods.LoadData(fileContent);
+            Console.WriteLine(newRecords != 0 ? $"{newRecords} nya avläsningar registrerades." :
+                                                 "Avläsningarna finns redan i databasen");
+            Console.WriteLine();
+            Console.WriteLine();
 
-            //Console.WriteLine("Alla sensorer med antal avläsningar:");
-            //PrintSensors();
-            //Console.WriteLine("\n");
+            Console.WriteLine("Alla sensorer med antal avläsningar:");
+            PrintSensors();
+            Console.WriteLine("\n");
 
-            
-            //DateTime date = new DateTime(2016, 11, 18);
             int sensorId = 6;
 
-            //PrintDataForDay(date, sensorId);
-            //Console.WriteLine();
-            //Console.WriteLine();
+            string season = "Höst";
+            PrintStartOfAutumnOrWinter(sensorId, season);
 
-            PrintSortedList(sensorId, (AccessMethods.Sortingselection)1);
+            season = "Vinter";
+            PrintStartOfAutumnOrWinter(sensorId, season);
 
-            DateTime autumnDate = AccessMethods.GetFirstAutumnDay(sensorId);
-            Console.WriteLine($"Höst blev det {autumnDate.ToShortDateString()}");
+            Console.WriteLine();
+            Console.WriteLine();
+
+            DateTime date = new DateTime(2016, 11, 18);
+
+            PrintDataForDay(date, sensorId);
+            Console.WriteLine();
+            Console.WriteLine();
+
+            PrintSortedList(sensorId, (AccessMethods.Sortingselection)4);
+           
+
 
         }
 
-       
+        private static void PrintStartOfAutumnOrWinter(int sensorId, string season)
+        {
+            DateTime seasonDate = AccessMethods.GetFirstDayOfSeason(sensorId, season);
+
+            string printString = seasonDate != default ?
+                $"{season} blev det {seasonDate.ToShortDateString()}." :
+                $"Det blev inte {season.ToLower()} innan 2016 års slut.";
+
+            Console.WriteLine(printString);
+        }
 
         static void PrintSensors()
         {
@@ -77,36 +89,42 @@ namespace Weather2ConsoleApp
             }
         }
 
-        static void PrintDataForDay(DateTime date, int id)
+        static void PrintDataForDay(DateTime date, int sensorId)
         {
-            (DailyData dailyData, int numberOfTemperatureRecords, int numberOfHumidityRecords) =
-             AccessMethods.GetDataForSensorByDay(date, id);
 
-            Sensor sensor = AccessMethods.GetSensor(id);
+            Sensor sensor = AccessMethods.GetSensor(sensorId);
 
-            if (sensor == null)
+            while (true)
             {
-                Console.WriteLine($"Det finns ingen sensor med Id {id}.");
-            }
+                if (sensor == null)
+                {
+                    Console.WriteLine($"Det finns ingen sensor med Id {sensorId}.");
+                    break;
+                }
 
-            else if (numberOfTemperatureRecords == 0 && numberOfHumidityRecords == 0)
-            {
-                Console.WriteLine($"Det finns inga data från {date.ToShortDateString()} för sensor \"{sensor.SensorName}\".");
-            }
+                DailyData dailyData = AccessMethods.GetDataForSensorByDay(date, sensorId);
 
-            else
-            {
-                string heading = $"Dygnsmedelvärden från sensor \"{sensor.SensorName}\" för valt datum";
-                Console.WriteLine($"{heading}\n{Utils.GetUnderline(heading)}\n");
+                if (dailyData.NumberOfTemperatureRecords == 0 && dailyData.NumberOfHumidityRecords == 0)
+                {
+                    Console.WriteLine($"Det finns inga data från {date.ToShortDateString()} för sensor \"{sensor.SensorName}\".");
+                    break;
+                }
 
-                Console.WriteLine($"Datum\t\tTemperatur (C)\tAntal avläsningar\tFuktighet (%)\tMögelrisk (%)\t\tAntal avläsningar");
-                Console.WriteLine(dailyData);
+                else
+                {
+                    string heading = $"Dygnsmedelvärden från sensor \"{sensor.SensorName}\" för valt datum";
+                    Console.WriteLine($"{heading}\n{Utils.GetUnderline(heading)}\n");
+
+                    Console.WriteLine($"Datum\t\tTemperatur (C)\tAntal avläsningar\tFuktighet (%)\tMögelrisk (%)\t\tAntal avläsningar");
+                    Console.WriteLine(dailyData);
+                    break;
+                }
             }
         }
 
         static void PrintSortedList(int id, AccessMethods.Sortingselection sortOn)
         {
-            List<DailyData> dailyData = AccessMethods.SortDailyRecords(id, sortOn);
+            List<DailyData> dailyData = AccessMethods.SortDailyRecordsForSensor(id, sortOn);
 
             Sensor sensor = AccessMethods.GetSensor(id);
 
@@ -148,11 +166,10 @@ namespace Weather2ConsoleApp
 
             if (dailyData.Count != 0)
             {
-                Console.WriteLine($"Visar resultat för {dailyData.Count} valda dygn. Tryck på valfri tangent för att avsluta.\n");
+                Console.WriteLine($"Visar resultat för {dailyData.Count} valda dygn. Tryck på valfri tangent för att komma till slutet av listan.\n");
                 Console.WriteLine($"Datum\t\tTemperatur (C)\tAntal avläsningar\tFuktighet (%)\tMögelrisk (%)\t\tAntal avläsningar");
                 Console.WriteLine(string.Join(Environment.NewLine, dailyData));
                 Console.WriteLine();
-                Console.WriteLine($"Visar resultat för {dailyData.Count} valda dygn. Tryck på valfri tangent för att avsluta.\n");
                 Utils.ScrollToTop(dailyData.Count + 15);
             }
         }

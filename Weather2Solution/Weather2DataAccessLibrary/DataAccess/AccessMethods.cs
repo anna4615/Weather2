@@ -16,7 +16,8 @@ namespace Weather2DataAccessLibrary.DataAccess
 
             using (Weather2Context context = new Weather2Context())
             {
-                // Tillfällig lista för att för vardera rad kolla om sensor finns, antar att det inte går att kolla mot context.Sensors innan SaveChanges körts.
+                // Skapar lista för att för vardera avläsning kolla om sensor finns, antar
+                //att det inte går att kolla mot context.Sensors innan SaveChanges körts.
                 List<Sensor> sensors = context.Sensors.ToList();
 
                 foreach (string line in fileContent)
@@ -26,7 +27,6 @@ namespace Weather2DataAccessLibrary.DataAccess
 
                     if (sensors.Count() == 0 ||
                         sensors.Where(s => s.SensorName == values[1]).Count() == 0)
-
                     {
                         Sensor newSensor = new Sensor();
                         newSensor.SensorName = values[1];
@@ -34,9 +34,8 @@ namespace Weather2DataAccessLibrary.DataAccess
                         sensors.Add(newSensor);
                         context.Sensors.Add(newSensor);
                     }
-
                 }
-                //return sensors.Count;  // ta bort
+                
                 numberOfNewSensors = context.SaveChanges();
             }
 
@@ -93,7 +92,7 @@ namespace Weather2DataAccessLibrary.DataAccess
                         if (double.TryParse(values[2], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out double temp))
                             record.Temperature = temp;
 
-                         if (int.TryParse(values[3], out int humidity))
+                        if (int.TryParse(values[3], out int humidity))
                             record.Humidity = humidity;
 
 
@@ -138,54 +137,12 @@ namespace Weather2DataAccessLibrary.DataAccess
             return records;
         }
 
-        public static (int, double?) GetAverageTempForDayAndSensor(DateTime date, int sensorId)
+        public static DailyData GetDataForSensorByDay(DateTime date, int sensorId)
         {
-            int numberOfRecords = 0;
-            double? averageTemp = null;
+           DailyData dailyData = GetDailyDataListForSensor(sensorId)
+                .FirstOrDefault(d => d.Day.Date == date.Date);
 
-            using (Weather2Context context = new Weather2Context())
-            {
-                var selectedRecords = context.Records
-                .Where(r => r.SensorId == sensorId &&
-                            r.Time.Date == date.Date)
-                .Select(r => r.Temperature);
-
-                numberOfRecords = selectedRecords.Count();
-                averageTemp = selectedRecords.Average();
-            }
-
-            return (numberOfRecords, averageTemp);
-        }
-
-        public static (DailyData, int, int) GetDataForSensorByDay(DateTime date, int id)
-        {
-
-            int numberOfTemperatureRecords = 0;
-            int numberOfHumidityRecords = 0;
-            var dailyData = new DailyData();
-
-            using (Weather2Context context = new Weather2Context())
-            {
-                var records = context.Records
-                              .Where(r => r.SensorId == id && r.Time.Date == date.Date);
-
-                numberOfTemperatureRecords = records.Select(r => r.Temperature).Count();
-                numberOfHumidityRecords = records.Select(r => r.Humidity).Count();
-
-                dailyData = records.GroupBy(r => r.Time.Date)
-                        .Select(g => new DailyData
-                        {
-                            Day = g.Key,
-                            AverageTemperature = g.Average(g => g.Temperature),
-                            AverageHumidity = g.Average(g => g.Humidity),
-                            FungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity)),
-                            NumberOfTemperatureRecords = numberOfTemperatureRecords,
-                            NumberOfHumidityRecords = numberOfHumidityRecords
-                        })
-                        .FirstOrDefault();
-            }
-
-            return (dailyData, numberOfTemperatureRecords, numberOfHumidityRecords);
+            return dailyData;
         }
 
         public enum Sortingselection
@@ -196,43 +153,34 @@ namespace Weather2DataAccessLibrary.DataAccess
             FungusRisk
         }
 
-        public static List<DailyData> SortDailyRecords(int id, Sortingselection sortOn)
+        public static List<DailyData> SortDailyRecordsForSensor(int sensorId, Sortingselection sortOn)
         {
             List<DailyData> sortedDailyRecords = new List<DailyData>();
 
-            using (Weather2Context context = new Weather2Context())
+            switch (sortOn)
             {
-                var dailyRecords = context.Records
-                        .Where(r => r.SensorId == id)
-                        .GroupBy(r => r.Time.Date)
-                        .Select(g => new DailyData
-                        {
-                            Day = g.Key,
-                            AverageTemperature = g.Average(r => r.Temperature),
-                            AverageHumidity = g.Average(r => r.Humidity),
-                            FungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity)),
-                            NumberOfTemperatureRecords = g.Select(r => r.Temperature).Count(),
-                            NumberOfHumidityRecords = g.Select(r => r.Humidity).Count()
-                        })
+                case Sortingselection.Date:
+                    sortedDailyRecords = GetDailyDataListForSensor(sensorId)
+                        .OrderBy(d => d.Day)
                         .ToList();
-
-                switch (sortOn)
-                {
-                    case Sortingselection.Date:
-                        sortedDailyRecords = dailyRecords.OrderBy(d => d.Day).ToList();
-                        break;
-                    case Sortingselection.Temperature:
-                        sortedDailyRecords = dailyRecords.OrderByDescending(d => d.AverageTemperature).ToList(); ;
-                        break;
-                    case Sortingselection.Humidity:
-                        sortedDailyRecords = dailyRecords.OrderBy(d => d.AverageHumidity).ToList();
-                        break;
-                    case Sortingselection.FungusRisk:
-                        sortedDailyRecords = dailyRecords.OrderBy(d => d.FungusRisk).ToList();
-                        break;
-                    default:
-                        break;
-                }
+                    break;
+                case Sortingselection.Temperature:
+                    sortedDailyRecords = GetDailyDataListForSensor(sensorId)
+                        .OrderByDescending(d => d.AverageTemperature)
+                        .ToList();
+                    break;
+                case Sortingselection.Humidity:
+                    sortedDailyRecords = GetDailyDataListForSensor(sensorId)
+                        .OrderBy(d => d.AverageHumidity)
+                        .ToList();
+                    break;
+                case Sortingselection.FungusRisk:
+                    sortedDailyRecords = GetDailyDataListForSensor(sensorId)
+                        .OrderBy(d => d.FungusRisk)
+                        .ToList();
+                    break;
+                default:
+                    break;
             }
 
             return sortedDailyRecords;
@@ -250,73 +198,84 @@ namespace Weather2DataAccessLibrary.DataAccess
             return risk;
         }
 
-        public static List<Record> SortOnTemperatureForSensor(int id)
-        {
-            List<Record> sortedOnDate = new List<Record>();
-
-            using (Weather2Context context = new Weather2Context())
-            {
-                var sortedByDate = context.Records
-                        .Where(r => r.SensorId == id)
-                        .GroupBy(r => r.Time.Date)
-                        .Select(g => new DailyData
-                        {
-                            Day = g.Key,
-                            AverageTemperature = g.Average(g => g.Temperature),
-                            AverageHumidity = g.Average(g => g.Humidity)
-                        })
-                        .OrderBy(a => a.AverageTemperature);
-            }
-
-            return sortedOnDate;
-        }
-
-        public static DateTime GetFirstAutumnDay(int id)
+        public static DateTime GetFirstDayOfSeason(int sensorId, string season)
         {
             // Villkor för höst:
             // - Första dygnet av 5 dygn i rad med medeltemperatur under 10,0C
             // - Kan starta tidigast 1:a augusti
 
-            int earliestStart = new DateTime(2016, 8, 1).DayOfYear;
-            DateTime autumnStart = new DateTime();
+            // Villkor för vinter:
+            // - Första dygnet av 5 dygn i rad med medeltemperatur under 0,0C
+            // - Kan starta tidigast 1:a augusti
 
-            using (Weather2Context context = new Weather2Context())
+            DateTime earliestStart = new DateTime(2016, 8, 1);
+            DateTime seasonStart = new DateTime();
+            double startTemp = 0.0;
+
+            switch (season.ToLower())
             {
-                var dailyData = context.Records
-                        .Where(r => r.SensorId == id)
-                        .GroupBy(r => r.Time.Date)
-                        .Where(g => g.Key.DayOfYear >= earliestStart && g.Average(r => r.Temperature) != null)
-                        .Select(g => new DailyData
-                        {
-                            Day = g.Key,
-                            AverageTemperature = g.Average(r => r.Temperature)
-                        })
-                        .OrderBy(d => d.Day);
+                case "höst":
+                    startTemp = 10.0;
+                    break;
+                case "vinter":
+                    startTemp = 0.0;
+                    break;
+                default:
+                    break;
+            }
 
-                DailyData[] dailyDataArray = new DailyData[dailyData.Count()];
-                int index = 0;
+            List<DailyData> selectedDailyData = GetDailyDataListForSensor(sensorId)
+                .Where(d => d.Day >= earliestStart && d.AverageTemperature != null)
+                .OrderBy(d => d.Day)
+                .ToList();
 
-                foreach (DailyData day in dailyData)
+            DailyData[] dailyDataArray = new DailyData[selectedDailyData.Count()];
+            int index = 0;
+
+            foreach (DailyData day in selectedDailyData)
+            {
+                dailyDataArray[index] = day;
+                index++;
+            }
+
+            for (int i = 4; i < dailyDataArray.Length; i++)
+            {
+                if (dailyDataArray[i].AverageTemperature < startTemp &&   // Det finns inte data för alla dagar, räknar 5 dagar tillbaka av de som har data
+                    dailyDataArray[i - 1].AverageTemperature < startTemp &&
+                    dailyDataArray[i - 2].AverageTemperature < startTemp &&
+                    dailyDataArray[i - 3].AverageTemperature < startTemp &&
+                    dailyDataArray[i - 4].AverageTemperature < startTemp)
                 {
-                    dailyDataArray[index] = day;
-                    index++;
-                }
-
-                for (int i = 4; i < dailyDataArray.Length; i++)
-                {
-                    if (dailyDataArray[i].AverageTemperature < 10.0 &&   // Det finns inte data för alla dagar men räknar 5 dagar tillbaka av de som har data
-                        dailyDataArray[i-1].AverageTemperature < 10.0 &&
-                        dailyDataArray[i-2].AverageTemperature < 10.0 &&
-                        dailyDataArray[i-3].AverageTemperature < 10.0 &&
-                        dailyDataArray[i-4].AverageTemperature < 10.0)
-                    {
-                        autumnStart = dailyDataArray[i - 4].Day;
-                        break;
-                    }
+                    seasonStart = dailyDataArray[i - 4].Day;
+                    break;
                 }
             }
 
-            return autumnStart;
+            return seasonStart;
+        }
+
+        public static List<DailyData> GetDailyDataListForSensor(int sensorId)
+        {
+            List<DailyData> dailyDataList = new List<DailyData>();
+
+            using (Weather2Context context = new Weather2Context())
+            {
+                dailyDataList = context.Records
+                    .Where(r => r.SensorId == sensorId)
+                    .GroupBy(r => r.Time.Date)
+                    .Select(g => new DailyData()
+                    {
+                        Day = g.Key,
+                        AverageTemperature = g.Average(r => r.Temperature),
+                        AverageHumidity = g.Average(r => r.Humidity),
+                        FungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity)),
+                        NumberOfTemperatureRecords = g.Select(r => r.Temperature).Count(),
+                        NumberOfHumidityRecords = g.Select(r => r.Humidity).Count()
+                    })
+                    .ToList();
+            }
+
+            return dailyDataList;
         }
     }
 }
