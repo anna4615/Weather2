@@ -19,6 +19,7 @@ namespace Weather2ConsoleApp
             //PrintRecords(r);
 
             //string[] fileContent = File.ReadAllLines("TemperaturData.txt");
+            //string[] fileContent = File.ReadAllLines("TestData.txt");
 
             //Console.WriteLine("Skapar sensorer...");
             //int newSensors = AccessMethods.CreateSensors(fileContent);
@@ -41,20 +42,18 @@ namespace Weather2ConsoleApp
             //PrintSensors();
             //Console.WriteLine("\n");
 
+            
             //DateTime date = new DateTime(2016, 11, 18);
-            //int sensorId = 6;
+            int sensorId = 6;
 
             //PrintDataForDay(date, sensorId);
             //Console.WriteLine();
             //Console.WriteLine();
 
-            //PrintSortedList(sensorId, (AccessMethods.Sortingselection)1);
+            PrintSortedList(sensorId, (AccessMethods.Sortingselection)1);
 
-            DateTime autumnDate = AccessMethods.GetFirstAutumnDay(6);
+            DateTime autumnDate = AccessMethods.GetFirstAutumnDay(sensorId);
             Console.WriteLine($"Höst blev det {autumnDate.ToShortDateString()}");
-            
-
-
 
         }
 

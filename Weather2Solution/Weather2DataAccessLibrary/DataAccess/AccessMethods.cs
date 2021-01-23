@@ -90,10 +90,10 @@ namespace Weather2DataAccessLibrary.DataAccess
                         if (DateTime.TryParse(values[0], out DateTime time))
                             record.Time = time;
 
-                        if (double.TryParse(values[2], (NumberStyles)32, CultureInfo.InvariantCulture, out double temp))
+                        if (double.TryParse(values[2], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out double temp))
                             record.Temperature = temp;
 
-                        if (int.TryParse(values[3], out int humidity))
+                         if (int.TryParse(values[3], out int humidity))
                             record.Humidity = humidity;
 
 
@@ -277,39 +277,41 @@ namespace Weather2DataAccessLibrary.DataAccess
             // - Första dygnet av 5 dygn i rad med medeltemperatur under 10,0C
             // - Kan starta tidigast 1:a augusti
 
-            int earliestStart = new DateTime(0001, 8, 1).Day;
+            int earliestStart = new DateTime(2016, 8, 1).DayOfYear;
             DateTime autumnStart = new DateTime();
 
             using (Weather2Context context = new Weather2Context())
             {
-                var dailyRecords = context.Records
+                var dailyData = context.Records
                         .Where(r => r.SensorId == id)
                         .GroupBy(r => r.Time.Date)
-                        .Where(g => g.Key.Day >= earliestStart && g.Average(r => r.Temperature) != null)
+                        .Where(g => g.Key.DayOfYear >= earliestStart && g.Average(r => r.Temperature) != null)
                         .Select(g => new DailyData
                         {
                             Day = g.Key,
                             AverageTemperature = g.Average(r => r.Temperature)
-                        });
+                        })
+                        .OrderBy(d => d.Day);
 
-                DailyData[] dailyTemperatureArray = new DailyData[dailyRecords.Count()];
+                DailyData[] dailyDataArray = new DailyData[dailyData.Count()];
                 int index = 0;
 
-                foreach (DailyData day in dailyRecords)
+                foreach (DailyData day in dailyData)
                 {
-                    dailyTemperatureArray[index] = day;
+                    dailyDataArray[index] = day;
                     index++;
                 }
 
-                for (int i = 4; i < dailyTemperatureArray.Length; i++)
+                for (int i = 4; i < dailyDataArray.Length; i++)
                 {
-                    if (dailyTemperatureArray[i].AverageTemperature < 10.0 &&   // Det finns inte data för alla dagar men räknar 5 dagar tillbaka av de som har data
-                        dailyTemperatureArray[i-1].AverageTemperature < 10.0 &&
-                        dailyTemperatureArray[i-2].AverageTemperature < 10.0 &&
-                        dailyTemperatureArray[i-3].AverageTemperature < 10.0 &&
-                        dailyTemperatureArray[i-4].AverageTemperature < 10.0)
+                    if (dailyDataArray[i].AverageTemperature < 10.0 &&   // Det finns inte data för alla dagar men räknar 5 dagar tillbaka av de som har data
+                        dailyDataArray[i-1].AverageTemperature < 10.0 &&
+                        dailyDataArray[i-2].AverageTemperature < 10.0 &&
+                        dailyDataArray[i-3].AverageTemperature < 10.0 &&
+                        dailyDataArray[i-4].AverageTemperature < 10.0)
                     {
-                        autumnStart = dailyTemperatureArray[i - 4].Day;
+                        autumnStart = dailyDataArray[i - 4].Day;
+                        break;
                     }
                 }
             }
