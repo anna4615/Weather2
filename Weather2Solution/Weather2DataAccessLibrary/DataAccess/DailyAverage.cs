@@ -20,18 +20,18 @@ namespace Weather2DataAccessLibrary.DataAccess
 
             printString += AverageTemperature != null ?
                 $"{Math.Round((double)AverageTemperature, 1)}\t\t" :
-                $"data saknas\t";
+                $"*\t\t";
 
             //printString += NumberOfTemperatureRecords + "\t\t\t";
 
             printString += AverageHumidity != null ?
                 $"{Math.Round((double)AverageHumidity)}\t\t" :
-                $"data saknas\t";
+                $"*\t\t";
 
-            if (FungusRisk <= 0)
+            if (FungusRisk < 1)
                 printString += "Obetydlig risk\t\t";
             else if (FungusRisk == null)
-                printString += $"Kan inte beräknas\t";
+                printString += $"*";
             else
                 printString += $"{Math.Round((double)FungusRisk)}\t\t\t";
 
@@ -39,6 +39,5 @@ namespace Weather2DataAccessLibrary.DataAccess
 
             return printString;
         }
-
     }
 }

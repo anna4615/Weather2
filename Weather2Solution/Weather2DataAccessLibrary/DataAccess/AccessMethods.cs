@@ -1,5 +1,6 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -133,12 +134,12 @@ namespace Weather2DataAccessLibrary.DataAccess
 
             using (Weather2Context context = new Weather2Context())
             {
-                //records = context.Sensors
-                //    .Where(s => s.Id == sensorId)
-                //    .Include(s => s.Records)
-                //    .Select(s => s.Records)
-                //    .FirstOrDefault()
-                //    .ToList();
+                records = context.Sensors
+                    .Where(s => s.Id == sensorId)
+                    .Include(s => s.Records)
+                    .Select(s => s.Records)
+                    .FirstOrDefault()
+                    .ToList();
 
                 records = context.Records.
                     Where(r => r.SensorId == sensorId)
@@ -150,54 +151,56 @@ namespace Weather2DataAccessLibrary.DataAccess
 
         public static DailyAverage GetDailyAverageForSensor(DateTime date, Sensor sensor)
         {
-            DailyAverage dailyAverage = GetDailyAverageListForSensor(sensor)
+
+
+            DailyAverage selectedDailyAverage = GetDailyAverageListForSensor(sensor)
                  .FirstOrDefault(d => d.Day.Date == date.Date);
 
-            return dailyAverage;
+            return selectedDailyAverage;
         }
 
-        public enum Sortingselection
-        {
-            Date = 1,
-            Temperature,
-            Humidity,
-            FungusRisk
-        }
+        //public enum Sortingselection
+        //{
+        //    Date = 1,
+        //    Temperature,
+        //    Humidity,
+        //    FungusRisk
+        //}
 
-        public static List<DailyAverage> SortByDailyAverageForSensor(Sensor sensor, Sortingselection sortOn)
-        {
-            List<DailyAverage> sortedDailyAverages = new List<DailyAverage>();
+        //public static List<DailyAverage> SortByDailyAverageForSensor(Sensor sensor, Sortingselection sortOn)
+        //{
+        //    List<DailyAverage> sortedDailyAverages = new List<DailyAverage>();
 
-            switch (sortOn)
-            {
-                case Sortingselection.Date:
-                    sortedDailyAverages = GetDailyAverageListForSensor(sensor)
-                        .OrderBy(d => d.Day)
-                        .ToList();
-                    break;
-                case Sortingselection.Temperature:
-                    sortedDailyAverages = GetDailyAverageListForSensor(sensor)
-                        .OrderByDescending(d => d.AverageTemperature)
-                        .ToList();
-                    break;
-                case Sortingselection.Humidity:
-                    sortedDailyAverages = GetDailyAverageListForSensor(sensor)
-                        .OrderBy(d => d.AverageHumidity)
-                        .ToList();
-                    break;
-                case Sortingselection.FungusRisk:
-                    sortedDailyAverages = GetDailyAverageListForSensor(sensor)
-                        .OrderBy(d => d.FungusRisk)
-                        .ToList();
-                    break;
-                default:
-                    break;
-            }
+        //    switch (sortOn)
+        //    {
+        //        case Sortingselection.Date:
+        //            sortedDailyAverages = GetDailyAverageListForSensor(sensor)
+        //                .OrderBy(d => d.Day)
+        //                .ToList();
+        //            break;
+        //        case Sortingselection.Temperature:
+        //            sortedDailyAverages = GetDailyAverageListForSensor(sensor)
+        //                .OrderByDescending(d => d.AverageTemperature)
+        //                .ToList();
+        //            break;
+        //        case Sortingselection.Humidity:
+        //            sortedDailyAverages = GetDailyAverageListForSensor(sensor)
+        //                .OrderBy(d => d.AverageHumidity)
+        //                .ToList();
+        //            break;
+        //        case Sortingselection.FungusRisk:
+        //            sortedDailyAverages = GetDailyAverageListForSensor(sensor)
+        //                .OrderBy(d => d.FungusRisk)
+        //                .ToList();
+        //            break;
+        //        default:
+        //            break;
+        //    }
 
-            return sortedDailyAverages;
-        }
+        //    return sortedDailyAverages;
+        //}
 
-        public static double? GetFungusRisk(double? temp, double? humidity)
+        public static double? GetFungusRisk(double? temp, double? humidity) // ta bort avrundning
         {
             double? risk = null;
 
@@ -293,17 +296,17 @@ namespace Weather2DataAccessLibrary.DataAccess
                     dailyAverages.Add(dailyAverage);
                 }
 
-                    //.Select(g => new DailyAverage()
-                    //{
-                    //    Day = g.Key,
-                    //    AverageTemperature = GetAverageTemperatureForDayAndSensor(sensor, g.Key),
-                    //    // AverageTemperature = g.Average(r => r.Temperature),
-                    //    AverageHumidity = g.Average(r => r.Humidity),
-                    //    FungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity)),
-                    //    NumberOfTemperatureRecords = g.Select(r => r.Temperature).Count(),
-                    //    NumberOfHumidityRecords = g.Select(r => r.Humidity).Count()
-                    //})
-                    //.ToList();
+                //.Select(g => new DailyAverage()
+                //{
+                //    Day = g.Key,
+                //    AverageTemperature = GetAverageTemperatureForDayAndSensor(sensor, g.Key),
+                //    // AverageTemperature = g.Average(r => r.Temperature),
+                //    AverageHumidity = g.Average(r => r.Humidity),
+                //    FungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity)),
+                //    NumberOfTemperatureRecords = g.Select(r => r.Temperature).Count(),
+                //    NumberOfHumidityRecords = g.Select(r => r.Humidity).Count()
+                //})
+                //.ToList();
             }
 
             return dailyAverages;
@@ -322,11 +325,12 @@ namespace Weather2DataAccessLibrary.DataAccess
             //Tx; är maximitemperaturen från klockan 19 föregående dygn till klockan 19 innevarande dygn(klockan 20 - 20 vid sommartid).
             //Tn; är minimitemperaturen från klockan 19 föregående dygn till klockan 19 innevarande dygn(klockan 20 - 20 vid sommartid).
 
+            // Jag har förändrat några av kriterierna:
             // Väljer första avläsning från respektive timme.
-            // Har inte justerat för sommartid.
-            // Använder dygnets värden för att hitta max och min, dvs midnatt till midnatt.
+            // Tx är maximitemperaturen för dygnet, dvs midnatt till midnatt.
+            // Tn är minimitemperaturen för dygnet, dvs midnatt till midnatt.
 
-            // Medefuktighet och mögelrisk beräknas från mätvärdena från klockan 7, 13 och 19.
+            // Medelfuktighet och mögelrisk beräknas från mätvärdena vid klockan 7, 13 och 19.
 
             int[] coeffForMonth = new int[5];
 
@@ -335,53 +339,91 @@ namespace Weather2DataAccessLibrary.DataAccess
                 coeffForMonth[i] = EMCoefficients[date.Month - 1, i];
             }
 
+            (int time07, int time13, int time19) = GetTimesAdjustedForDayLightSaving(date);
+
+            double? averageTemp = null;
+            double? averageHumidity = null;
+            double? averageFungusRisk = null;
+
             var sensorRecords = sensor.Records
                 .Where(r => r.Time.Date == date.Date);
 
+            //Loop som avbryter beräkningen om någon tidpunkt saknas, hoppades 
+            //det skulle spara tid men det blev ingen större skillnad.
+            while (true)
+            {
+                var record07 = sensorRecords
+                .FirstOrDefault(r => r.Time.Hour == time07);
 
-            var record07 = sensorRecords
-            .FirstOrDefault(r => r.Time.Hour == 7);
+                if (record07 == null)
+                {
+                    break;
+                }
 
-            double? temp07 = record07 != null ? record07.Temperature : null;
-            double? hum07 = record07 != null ? record07.Humidity : null;
-            double? fungus07 = GetFungusRisk(temp07, hum07);
+                var record13 = sensorRecords
+                    .FirstOrDefault(r => r.Time.Hour == time13);
+
+                if (record13 == null)
+                {
+                    break;
+                }
+
+                var record19 = sensorRecords
+                    .FirstOrDefault(r => r.Time.Hour == time19);
+
+                if (record19 == null)
+                {
+                    break;
+                }
+
+                double? temp07 = record07.Temperature;
+                double? hum07 = record07.Humidity;
+                double? fungus07 = GetFungusRisk(temp07, hum07);
+                fungus07 = fungus07 < 0 ? 0 : fungus07;  // En risk kan inte vara lägre än 0
+
+                double? temp13 = record13.Temperature;
+                double? hum13 = record13.Humidity;
+                double? fungus13 = GetFungusRisk(temp13, hum13);
+                fungus13 = fungus13 < 0 ? 0 : fungus13;  // En risk kan inte vara lägre än 0
+
+                double? temp19 = record19.Temperature;
+                double? hum19 = record19.Humidity;
+                double? fungus19 = GetFungusRisk(temp19, hum19);
+                fungus19 = fungus19 < 0 ? 0 : fungus19;  // En risk kan inte vara lägre än 0
+
+                double? tempMax = sensorRecords
+                    .Max(r => r.Temperature);
+
+                double? tempMin = sensorRecords
+                    .Min(r => r.Temperature);
 
 
-            var record13 = sensorRecords
-                .FirstOrDefault(r => r.Time.Hour == 13);
+                averageTemp = ((coeffForMonth[0] * temp07) + (coeffForMonth[1] * temp13) +
+                                       (coeffForMonth[2] * temp19) + (coeffForMonth[3] * tempMax) +
+                                       (coeffForMonth[4] * tempMin)) / 100;
 
-            double? temp13 = record13 != null ? record13.Temperature : null;
-            double? hum13 = record13 != null ? record13.Humidity : null;
-            double? fungus13 = GetFungusRisk(temp13, hum13);
+                averageHumidity = (hum07 + hum13 + hum19) / 3;
 
+                averageFungusRisk = (fungus07 + fungus13 + fungus19) / 3;
 
-            var record19 = sensorRecords
-                .FirstOrDefault(r => r.Time.Hour == 19);
-
-            double? temp19 = record19 != null ? record19.Temperature : null;
-            double? hum19 = record19 != null ? record19.Humidity : null;
-            double? fungus19 = GetFungusRisk(temp19, hum19);
-
-
-            double? tempMax = sensorRecords
-                .Max(r => r.Temperature);
-
-            double? tempMin = sensorRecords
-                .Min(r => r.Temperature);
-
-
-            double? averageTemp = ((coeffForMonth[0] * temp07) + (coeffForMonth[1] * temp13) +
-                                   (coeffForMonth[2] * temp19) + (coeffForMonth[3] * tempMax) + 
-                                   (coeffForMonth[4] * tempMin)) / 100;
-
-            double? averageHumidity = (hum07 + hum13 + hum19) / 3;
-
-            double? averageFungusRisk = (fungus07 + fungus13 + fungus19) / 3;
-
+                break;
+            }
 
             return (averageTemp, averageHumidity, averageFungusRisk);
         }
 
+        private static (int time07, int time13, int time19) GetTimesAdjustedForDayLightSaving(DateTime date)
+        {
+            if (date.IsDaylightSavingTime())
+            {
+                return (8, 14, 20);
+            }
+
+            else
+            {
+                return (7, 13, 19);
+            }
+        }
 
         static int[,] EMCoefficients = new int[,]
         {
@@ -412,6 +454,76 @@ namespace Weather2DataAccessLibrary.DataAccess
             }
 
             return coefficientsForMonth;
+        }
+
+        public static IEnumerable<IGrouping<DateTime, Record>> GetGroupedRecords(int sensorId)
+        {
+            var groupedList = GetRecordsForSensor(sensorId)
+                .GroupBy(r => r.Time.Date);
+
+            return groupedList;
+        }
+
+        public static (DateTime, double?[]) GetAverages(IGrouping<DateTime, Record> recordGroup)  // ta bort
+        {
+            int[] coeffForMonth = new int[5];
+
+            for (int i = 0; i < 5; i++)
+            {
+                coeffForMonth[i] = EMCoefficients[recordGroup.Key.Month - 1, i];
+            }
+
+            Record record07 = recordGroup
+            .FirstOrDefault(r => r.Time.Hour == 7);
+
+            double? temp07 = record07 != null ? record07.Temperature : null;
+            double? hum07 = record07 != null ? record07.Humidity : null;
+            double? fungus07 = GetFungusRisk(temp07, hum07);
+            fungus07 = fungus07 < 0 ? 0 : fungus07;  // En risk kan inte vara lägre än 0
+
+
+            var record13 = recordGroup
+                .FirstOrDefault(r => r.Time.Hour == 13);
+
+            double? temp13 = record13 != null ? record13.Temperature : null;
+            double? hum13 = record13 != null ? record13.Humidity : null;
+            double? fungus13 = GetFungusRisk(temp13, hum13);
+            fungus13 = fungus13 < 0 ? 0 : fungus13;  // En risk kan inte vara lägre än 0
+
+
+            var record19 = recordGroup
+                .FirstOrDefault(r => r.Time.Hour == 19);
+
+            double? temp19 = record19 != null ? record19.Temperature : null;
+            double? hum19 = record19 != null ? record19.Humidity : null;
+            double? fungus19 = GetFungusRisk(temp19, hum19);
+            fungus19 = fungus19 < 0 ? 0 : fungus19;  // En risk kan inte vara lägre än 0
+
+
+            double? tempMax = recordGroup
+                .Max(r => r.Temperature);
+
+            double? tempMin = recordGroup
+                .Min(r => r.Temperature);
+
+
+            double? averageTemp = ((coeffForMonth[0] * temp07) + (coeffForMonth[1] * temp13) +
+                                   (coeffForMonth[2] * temp19) + (coeffForMonth[3] * tempMax) +
+                                   (coeffForMonth[4] * tempMin)) / 100;
+
+
+            double? averageHumidity = (hum07 + hum13 + hum19) / 3;
+
+
+            double? averageFungusRisk = (fungus07 + fungus13 + fungus19) / 3;
+
+            double?[] averageArray = new double?[3];
+
+            averageArray[0] = averageTemp;
+            averageArray[1] = averageHumidity;
+            averageArray[2] = averageFungusRisk;
+
+            return (recordGroup.Key, averageArray);
         }
     }
 }
