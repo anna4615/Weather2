@@ -29,7 +29,7 @@ namespace Weather2DataAccessLibrary.DataAccess
                 $"*\t\t";
 
             if (FungusRisk < 1)
-                printString += "Obetydlig risk\t\t";
+                printString += "0\t\t";
             else if (FungusRisk == null)
                 printString += $"*";
             else

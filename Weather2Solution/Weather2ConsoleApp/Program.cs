@@ -11,7 +11,7 @@ namespace Weather2ConsoleApp
     {
         static void Main(string[] args)
         {
-            //List<Record> r = AccessMethods.GetRecordsForSensor(3);
+            //List<Record> r = AccessMethods.GetRecordsForSensor(5);
             //PrintRecords(r);
 
             //string[] fileContent = File.ReadAllLines("TemperaturData.txt");
@@ -38,40 +38,29 @@ namespace Weather2ConsoleApp
             //PrintSensors();
             //Console.WriteLine("\n");
 
-            int sensorId = 6;
+            //int sensorId = 6;
 
-            //PrintAverages2(sensorId); // ta bort
+            //string season = "Höst";
+            //PrintStartOfAutumnOrWinter(sensorId, season);
 
-            string season = "Höst";
-            PrintStartOfAutumnOrWinter(sensorId, season);
+            //season = "Vinter";
+            //PrintStartOfAutumnOrWinter(sensorId, season);
 
-            season = "Vinter";
-            PrintStartOfAutumnOrWinter(sensorId, season);
-
-            Console.WriteLine();
-            Console.WriteLine();
-
-            DateTime date = new DateTime(2016, 11, 10);
-            //Sensor sensor = AccessMethods.GetSensor(7);
-
-            //PrintDataForDay(date, sensorId);
             //Console.WriteLine();
             //Console.WriteLine();
 
-            //double? aveTemp = AccessMethods.GetAverageTemperatureForDayAndSensor(sensorId, date, AccessMethods.GetEkholmModenCoefficients());
+            //DateTime date = new DateTime(2016, 11, 10);
 
-            //Console.WriteLine($"Datum: {date.ToShortDateString()}\tMedeltemp: {aveTemp}");
+            //PrintSelectedDayForSensor(sensorId, date);
+            //Console.WriteLine();
+            //Console.WriteLine();
+            //PrintAllDaysForSensorSortedBySelection(sensorId, (Sortingselection)4);
 
-            //PrintSortedList(sensor, (AccessMethods.Sortingselection)1);
 
-            PrintSelectedDayForSensor(sensorId, date);
-            Console.WriteLine();
-            Console.WriteLine();
-            PrintAllDaysForSensorSortedBySelection(sensorId, (Sortingselection)1);
+            //PrintDifferenceInTempInAndOut(5, 6);
 
-            //double? averageTemperature = AccessMethods.GetAverageTemperatureForDayAndSensor(sensorId, new DateTime(2016, 10, 04), AccessMethods.GetEkholmModenCoefficients()); // ta bort
+            GetDailyListWithoutClass(5);
 
-            //Console.WriteLine($"Datum: {new DateTime(2016, 10, 04).ToShortDateString()}\tMedeltemp: {averageTemperature}");
         }
 
         private static void PrintStartOfAutumnOrWinter(int sensorId, string season)
@@ -272,6 +261,106 @@ namespace Weather2ConsoleApp
             }
 
             return heading;
+        }
+
+
+        private static void PrintDifferenceInTempInAndOut(int insideSensorId, int outsideSensorId)
+        {
+            Sensor insideSensor = NewMethods.GetSensor(insideSensorId);
+
+            List<IGrouping<DateTime, Record>> insideGroupedRecords = NewMethods.GetLIstOfRecordsForSensorGroupedByDay(insideSensor);
+
+            List<DailyAverage> insideDailyAverageList = new List<DailyAverage>();
+
+            foreach (var group in insideGroupedRecords)
+            {
+                (double? aveTemp, double? aveHum, double? aveFungus) = NewMethods.GetAveragesForDayAndSensor(group);
+
+                DailyAverage dailyAverage = new DailyAverage()
+                {
+                    Day = group.Key,
+                    AverageTemperature = aveTemp,
+                    AverageHumidity = aveHum,
+                    FungusRisk = aveFungus
+                };
+
+                insideDailyAverageList.Add(dailyAverage);
+            }
+
+            Sensor outsideSensor = NewMethods.GetSensor(outsideSensorId);
+
+            List<IGrouping<DateTime, Record>> outsideGroupedRecords = NewMethods.GetLIstOfRecordsForSensorGroupedByDay(outsideSensor);
+
+            List<DailyAverage> outsideDailyAverageList = new List<DailyAverage>();
+
+            foreach (var group in outsideGroupedRecords)
+            {
+                (double? aveTemp, double? aveHum, double? aveFungus) = NewMethods.GetAveragesForDayAndSensor(group);
+
+                DailyAverage dailyAverage = new DailyAverage()
+                {
+                    Day = group.Key,
+                    AverageTemperature = aveTemp,
+                    AverageHumidity = aveHum,
+                    FungusRisk = aveFungus
+                };
+
+                outsideDailyAverageList.Add(dailyAverage);
+            }
+
+
+            var q = insideDailyAverageList
+                .Select(id => new
+                {
+                    day = id.Day.Date,
+                    insideTemp = id.AverageTemperature,
+                    outsideTemp = outsideDailyAverageList.Where(od => od.Day.Date == id.Day.Date).FirstOrDefault().AverageTemperature
+                })
+                .OrderByDescending(a => a.insideTemp)   // Det blir snyggare tabell om alla dagar som saknar innetemp hamnar sist
+                .OrderByDescending(a => a.insideTemp - a.outsideTemp);
+
+
+            string heading = "Dygnsmedeltemperaturer";
+            Console.WriteLine($"{heading}\n{Utils.GetUnderline(heading)}");
+            Console.WriteLine("* = Otillräcklig data för att beräkna dygnsmedeltemperatur");
+            Console.WriteLine("Datum\t\tInne\tUte\tSkillnad");
+
+            foreach (var item in q)
+            {
+                double? tempDiff = item.insideTemp - item.outsideTemp;
+
+                Console.Write($"{item.day.ToShortDateString()}\t");
+                Console.Write(item.insideTemp != null ? $"{Math.Round((double)item.insideTemp, 1)}\t" : $"*\t");
+                Console.Write(item.outsideTemp != null ? $"{Math.Round((double)item.outsideTemp, 1)}\t" : $"*\t");
+                Console.Write(tempDiff != null ? $"{Math.Round((double)tempDiff, 1)}\n" : $"*\n");
+            }
+
+            Utils.ScrollToTop(q.Count() + 5);
+        }
+
+
+        static void GetDailyListWithoutClass(int sensorId)
+        {
+            Sensor insideSensor = NewMethods.GetSensor(sensorId);
+
+            List<IGrouping<DateTime, Record>> groupedRecords = NewMethods.GetLIstOfRecordsForSensorGroupedByDay(insideSensor);
+
+            var q = groupedRecords
+                .Where(g => g.Key == new DateTime(2016, 10, 4))
+                .Take(2)
+                .Select(g => new
+                {
+                    day = g.Key,
+                    averageTemp = Methods3.GetAverageTemp(Methods3.GetRecordsForAverageCalculation(g)),
+                    averageHum = Methods3.GetAverageHumidity(Methods3.GetRecordsForAverageCalculation(g)),
+                    // fungusRisk = Methods3.GetFungusRisk(Methods3.GetRecordsForAverageCalculation(g))        gör metod
+                })
+                .OrderBy(a => a.day);
+
+            foreach (var item in q)
+            {
+                Console.WriteLine($"dag {item.day.ToShortDateString()}\ttemp {item.averageTemp}\thum {item.averageHum}");
+            }
         }
     }
 }

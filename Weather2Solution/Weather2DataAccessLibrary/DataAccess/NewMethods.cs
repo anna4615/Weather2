@@ -84,7 +84,7 @@ namespace Weather2DataAccessLibrary.DataAccess
             // Tx är maximitemperaturen för dygnet, dvs midnatt till midnatt.
             // Tn är minimitemperaturen för dygnet, dvs midnatt till midnatt.
 
-            // Medelfuktighet och mögelrisk beräknas från mätvärdena vid klockan 7, 13 och 19.
+            // Medelfuktighet och mögelrisk beräknas från samma records som används för medeltemperatur.
 
             int[] coeffForMonth = new int[5];
 
@@ -130,32 +130,44 @@ namespace Weather2DataAccessLibrary.DataAccess
                 double? temp07 = record07.Temperature;
                 double? hum07 = record07.Humidity;
                 double? fungus07 = GetFungusRisk(temp07, hum07);
-                fungus07 = fungus07 < 0 ? 0 : fungus07;  // En risk kan inte vara lägre än 0
+                //fungus07 = fungus07 < 0 ? 0 : fungus07;  // En risk kan inte vara lägre än 0
 
                 double? temp13 = record13 != null ? record13.Temperature : null;
                 double? hum13 = record13 != null ? record13.Humidity : null;
                 double? fungus13 = GetFungusRisk(temp13, hum13);
-                fungus13 = fungus13 < 0 ? 0 : fungus13;  // En risk kan inte vara lägre än 0
+                //fungus13 = fungus13 < 0 ? 0 : fungus13;  // En risk kan inte vara lägre än 0
 
                 double? temp19 = record19.Temperature;
                 double? hum19 = record19.Humidity;
                 double? fungus19 = GetFungusRisk(temp19, hum19);
-                fungus19 = fungus19 < 0 ? 0 : fungus19;  // En risk kan inte vara lägre än 0
+                //fungus19 = fungus19 < 0 ? 0 : fungus19;  // En risk kan inte vara lägre än 0
 
-                double? tempMax = records
-                    .Max(r => r.Temperature);
+                Record recordWithTempMax = records
+                    .Where(r => r.Temperature == records.Max(r => r.Temperature))
+                    .FirstOrDefault();
 
-                double? tempMin = records
-                    .Min(r => r.Temperature);
+                double? tempMax = recordWithTempMax.Temperature;
+                double? humAtTempMax = recordWithTempMax.Humidity;
+                double? fungusAtTempMax = GetFungusRisk(tempMax, humAtTempMax);
+                //fungusAtTempMax = fungusAtTempMax < 0 ? 0 : fungusAtTempMax;  // En risk kan inte vara lägre än 0
 
+                Record recordWithTempMin = records
+                    .Where(r => r.Temperature == records.Min(r => r.Temperature))
+                    .FirstOrDefault();
 
+                double? tempMin = recordWithTempMin.Temperature;
+                double? humAtTempMin = recordWithTempMin.Humidity;
+                double? fungusAtTempMin = GetFungusRisk(tempMin, humAtTempMin);
+                fungusAtTempMin = fungusAtTempMin < 0 ? 0 : fungusAtTempMin;  // En risk kan inte vara lägre än 0
+
+                
                 averageTemp = ((coeffForMonth[0] * temp07) + (coeffForMonth[1] * temp13) +
-                                       (coeffForMonth[2] * temp19) + (coeffForMonth[3] * tempMax) +
-                                       (coeffForMonth[4] * tempMin)) / 100;
+                               (coeffForMonth[2] * temp19) + (coeffForMonth[3] * tempMax) +
+                               (coeffForMonth[4] * tempMin)) / 100;
 
-                averageHumidity = (hum07 + hum13 + hum19) / 3;
+                averageHumidity = (hum07 + hum13 + hum19 + humAtTempMax + humAtTempMin) / 5;
 
-                averageFungusRisk = (fungus07 + fungus13 + fungus19) / 3;
+                averageFungusRisk = (fungus07 + fungus13 + fungus19 + fungusAtTempMax + fungusAtTempMin) / 5;
 
                 break;
             }
