@@ -24,6 +24,21 @@ namespace Weather2DataAccessLibrary.DataAccess
             return sensor;
         }
 
+        public static List<Record> GetRecordsForSensor(Sensor sensor)
+        {
+            var records = new List<Record>();
+
+            using (Weather2Context context = new Weather2Context())
+            {
+                records = context.Records
+                    .Where(r => r.SensorId == sensor.Id)
+                    .ToList();
+            }
+
+            return records;
+        }
+
+
         public static List<IGrouping<DateTime, Record>> GetLIstOfRecordsForSensorGroupedByDay(Sensor sensor)
         {
             var groupedRecords = new List<IGrouping<DateTime, Record>>(); ;

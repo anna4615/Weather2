@@ -58,10 +58,218 @@ namespace Weather2ConsoleApp
 
 
             //PrintDifferenceInTempInAndOut(5, 6);
+            //------------------------------------------------------------------------------------------------------
+            int sensorId = 6;
+            DateTime date = new DateTime(2016, 10, 04);
+            Sensor sensor = NewMethods.GetSensor(sensorId);  //Lägg till felhantering
 
-            GetDailyListWithoutClass(5);
+            string season = "Höst";
+            PrintStartOfSeason(sensor, season);
+
+            season = "Vinter";
+            PrintStartOfSeason(sensor, season);
+            Console.WriteLine();
+
+            PrintSelectedDay(sensor, date);
+            Console.WriteLine();
+
+            PrintSortedDailyAverages(sensor);
 
         }
+
+        static void PrintSelectedDay(Sensor sensor, DateTime date)
+        {
+            List<Record> records = NewMethods.GetRecordsForSensor(sensor);
+
+            var dailyAverages = records
+                .GroupBy(r => r.Time.Date)
+                .Where(g => g.Key == date)
+                .Select(g => new
+                {
+                    day = g.Key,
+                    temp = g.Average(r => r.Temperature),
+                    hum = g.Average(r => r.Humidity),
+                    fungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity))
+                })
+                .FirstOrDefault();
+
+            string heading = $"Dygnsmedelvärden från sensor \"{sensor.SensorName}\" för valt datum";
+
+            Console.WriteLine($"{heading}\n{Utils.GetUnderline(heading)}");
+            Console.WriteLine($"Datum\t\tTemperatur (C)\tFuktighet (%)\tMögelrisk (%)");
+            Console.Write($"{dailyAverages.day.ToShortDateString()}\t{Math.Round((decimal)dailyAverages.temp, 1)}\t\t" +
+                $"{Math.Round((decimal)dailyAverages.hum)}\t\t");
+            Console.WriteLine(dailyAverages.fungusRisk > 0 ? $"{Math.Round((decimal)dailyAverages.fungusRisk)}" : "0");
+        }
+
+
+        enum Sortingselection
+        {
+            Date = 1,
+            Temperature,
+            Humidity,
+            FungusRisk
+        }
+
+
+        static void PrintSortedDailyAverages(Sensor sensor)
+        {
+            List<Record> records = NewMethods.GetRecordsForSensor(sensor);
+
+            var dailyAveragesList = records
+                .GroupBy(r => r.Time.Date)
+                .Select(g => new
+                {
+                    day = g.Key,
+                    temp = g.Average(r => r.Temperature),
+                    hum = g.Average(r => r.Humidity),
+                    fungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity))
+                });
+
+            var sorton = (Sortingselection)1;
+
+            switch (sorton)
+            {
+                case Sortingselection.Date:
+                    dailyAveragesList = dailyAveragesList.OrderBy(a => a.day);
+                    break;
+                case Sortingselection.Temperature:
+                    dailyAveragesList = dailyAveragesList.OrderByDescending(a => a.temp);
+                    break;
+                case Sortingselection.Humidity:
+                    dailyAveragesList = dailyAveragesList.OrderBy(a => a.hum);
+                    break;
+                case Sortingselection.FungusRisk:
+                    dailyAveragesList = dailyAveragesList.OrderByDescending(a => a.fungusRisk);
+                    break;
+                default:
+                    break;
+            }
+
+
+            string heading = GetHeadingForSortedList(sorton, sensor.SensorName);
+
+            Console.WriteLine($"{heading}\n{Utils.GetUnderline(heading)}");
+            Console.WriteLine($"Visar resultat för {dailyAveragesList.Count()} dygn.\n");
+            Console.WriteLine($"Datum\t\tTemperatur (C)\tFuktighet (%)\tMögelrisk (%)");
+
+            foreach (var item in dailyAveragesList)
+            {
+                Console.Write($"{item.day.ToShortDateString()}\t{Math.Round((decimal)item.temp, 1)}\t\t{Math.Round((decimal)item.hum)}\t\t");
+                Console.WriteLine(item.fungusRisk > 0 ? $"{Math.Round((decimal)item.fungusRisk)}" : "0");
+            }
+
+            Utils.ScrollToTop(dailyAveragesList.Count() + 5);
+        }
+
+        // Villkor för höst:
+        // - Första dygnet av 5 dygn i rad med medeltemperatur under 10,0C
+        // - Kan starta tidigast 1:a augusti
+
+        // Villkor för vinter:
+        // - Första dygnet av 5 dygn i rad med medeltemperatur under 0,0C
+        // - Kan starta tidigast 1:a augusti
+
+        // Det finns inte data för alla dagar, kollar 5 dagar tillbaka av de som har data
+        static void PrintStartOfSeason(Sensor sensor, string season)
+        {
+
+            List<Record> records = NewMethods.GetRecordsForSensor(sensor);
+
+            DateTime earliestStart = new DateTime(2016, 8, 1);
+
+            var dailyAveragesArray = records
+               .GroupBy(r => r.Time.Date)
+               .Where(g => g.Key >= earliestStart)
+               .Select(g => new
+               {
+                   day = g.Key,
+                   temp = g.Average(r => r.Temperature),
+                   hum = g.Average(r => r.Humidity),
+                   fungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity))
+               })
+               .OrderBy(a => a.day)
+               .ToArray();
+
+            double startTemp = 0.0;
+
+            switch (season.ToLower())
+            {
+                case "höst":
+                    startTemp = 10.0;
+                    break;
+                case "vinter":
+                    startTemp = 0.0;
+                    break;
+                default:
+                    break;
+            }
+
+            DateTime seasonStart = new DateTime();
+
+            for (int i = 4; i < dailyAveragesArray.Length; i++)
+            {
+                if (dailyAveragesArray[i].temp < startTemp &&
+                    dailyAveragesArray[i - 1].temp < startTemp &&
+                    dailyAveragesArray[i - 2].temp < startTemp &&
+                    dailyAveragesArray[i - 3].temp < startTemp &&
+                    dailyAveragesArray[i - 4].temp < startTemp)
+                {
+                    seasonStart = dailyAveragesArray[i - 4].day;
+                    break;
+                }
+            }
+
+            string printString = seasonStart != default ?
+                   $"{season} blev det {seasonStart.ToShortDateString()}." :
+                   $"Det blev inte {season.ToLower()} innan 2016 års slut.";
+
+            Console.WriteLine(printString);
+        }
+
+
+        public static double? GetFungusRisk(double? temp, double? humidity)
+        {
+            double? risk = (humidity - 78) * (temp / 15) / 0.22;
+
+            return risk;
+        }
+
+
+        private static string GetHeadingForSortedList(Sortingselection sortOn, string sensorName)
+        {
+            string heading = $"Dygnsmedelvärden från sensor \"{sensorName}\" sorterat på";
+
+            switch (sortOn)
+            {
+                case Sortingselection.Date:
+                    heading += " datum";
+                    break;
+                case Sortingselection.Temperature:
+                    heading += " temperatur, varmast till kallast";
+                    break;
+                case Sortingselection.Humidity:
+                    heading += " fuktighet, torrast till fuktigast";
+                    break;
+                case Sortingselection.FungusRisk:
+                    heading += $" risk för mögel, högst till lägst risk";
+                    break;
+                default:
+                    heading = "Ingen tabell tillgänglig, felaktigt sorteringsval";
+                    break;
+            }
+
+            return heading;
+        }
+
+
+
+
+
+
+
+
+        // -------------------------------------------------------------------------------------------------------------
 
         private static void PrintStartOfAutumnOrWinter(int sensorId, string season)
         {
@@ -107,13 +315,7 @@ namespace Weather2ConsoleApp
             }
         }
 
-        enum Sortingselection
-        {
-            Date = 1,
-            Temperature,
-            Humidity,
-            FungusRisk
-        }
+
 
         static void PrintSelectedDayForSensor(int sensorId, DateTime date)
         {
@@ -223,7 +425,7 @@ namespace Weather2ConsoleApp
                 }
 
 
-                string heading = GetHeadingforSortedList(sortOn, sensor.SensorName);
+                string heading = GetHeadingForSortedList(sortOn, sensor.SensorName);
 
                 Console.WriteLine($"{heading}\n{Utils.GetUnderline(heading)}\n");
                 Console.WriteLine($"Visar resultat för {sortedList.Count} dygn. Tryck på valfri tangent för att komma till slutet av listan.");
@@ -237,31 +439,7 @@ namespace Weather2ConsoleApp
             }
         }
 
-        private static string GetHeadingforSortedList(Sortingselection sortOn, string sensorName)
-        {
-            string heading = $"Dygnsmedelvärden från sensor \"{sensorName}\" sorterat på";
 
-            switch (sortOn)
-            {
-                case Sortingselection.Date:
-                    heading += " datum";
-                    break;
-                case Sortingselection.Temperature:
-                    heading += " temperatur, varmast till kallast";
-                    break;
-                case Sortingselection.Humidity:
-                    heading += " fuktighet, torrast till fuktigast";
-                    break;
-                case Sortingselection.FungusRisk:
-                    heading += $" risk för mögel, lägst till högst risk";
-                    break;
-                default:
-                    heading = "Ingen tabell tillgänglig, felaktigt sorteringsval";
-                    break;
-            }
-
-            return heading;
-        }
 
 
         private static void PrintDifferenceInTempInAndOut(int insideSensorId, int outsideSensorId)
@@ -339,28 +517,6 @@ namespace Weather2ConsoleApp
         }
 
 
-        static void GetDailyListWithoutClass(int sensorId)
-        {
-            Sensor insideSensor = NewMethods.GetSensor(sensorId);
 
-            List<IGrouping<DateTime, Record>> groupedRecords = NewMethods.GetLIstOfRecordsForSensorGroupedByDay(insideSensor);
-
-            var q = groupedRecords
-                .Where(g => g.Key == new DateTime(2016, 10, 4))
-                .Take(2)
-                .Select(g => new
-                {
-                    day = g.Key,
-                    averageTemp = Methods3.GetAverageTemp(Methods3.GetRecordsForAverageCalculation(g)),
-                    averageHum = Methods3.GetAverageHumidity(Methods3.GetRecordsForAverageCalculation(g)),
-                    // fungusRisk = Methods3.GetFungusRisk(Methods3.GetRecordsForAverageCalculation(g))        gör metod
-                })
-                .OrderBy(a => a.day);
-
-            foreach (var item in q)
-            {
-                Console.WriteLine($"dag {item.day.ToShortDateString()}\ttemp {item.averageTemp}\thum {item.averageHum}");
-            }
-        }
     }
 }
