@@ -20,7 +20,7 @@ namespace Weather2DataAccessLibrary.Models
         public override string ToString()
         {
             return $"Id: {Id}\tSensornamn: {SensorName, -10}" +
-                $"\tAntal avläsningar: {AccessMethods.GetNumberOfRecordsForSensor(this)}";
+                $"\tAntal avläsningar: {NewMethods.GetNumberOfRecordsForSensor(this)}";
         }
     }
 }
