@@ -57,13 +57,20 @@ namespace Weather2DataAccessLibrary.DataAccess
             return groupedRecords;
         }
 
-        public static IGrouping<DateTime, Record> GetRecordsForDate
-            (List<IGrouping<DateTime, Record>> groupedRecords, DateTime date)
+        public static bool DateHasRecords(DateTime date)
         {
-            IGrouping<DateTime, Record> selectedRecords = groupedRecords
-                .FirstOrDefault(r => r.Key.Date == date.Date);
+            bool foundRecord = false;
 
-            return selectedRecords;
+            using (Weather2Context context = new Weather2Context())
+            {
+
+                var q = context.Records
+                    .FirstOrDefault(r => r.Time.Date == date.Date);
+
+                foundRecord = q == null ? false : true;
+            }
+
+            return foundRecord;
         }
 
 
@@ -175,7 +182,7 @@ namespace Weather2DataAccessLibrary.DataAccess
                 double? fungusAtTempMin = GetFungusRisk(tempMin, humAtTempMin);
                 fungusAtTempMin = fungusAtTempMin < 0 ? 0 : fungusAtTempMin;  // En risk kan inte vara lägre än 0
 
-                
+
                 averageTemp = ((coeffForMonth[0] * temp07) + (coeffForMonth[1] * temp13) +
                                (coeffForMonth[2] * temp19) + (coeffForMonth[3] * tempMax) +
                                (coeffForMonth[4] * tempMin)) / 100;
@@ -244,7 +251,7 @@ namespace Weather2DataAccessLibrary.DataAccess
             // Det finns inte data för alla dagar, räknar 5 dagar tillbaka av de som har data
 
             DateTime earliestStart = new DateTime(2016, 8, 1);
-                       
+
 
             IEnumerable<IGrouping<DateTime, Record>> selectedRecords = GetLIstOfRecordsForSensorGroupedByDay(sensor)
                                                                        .Where(d => d.Key.Date >= earliestStart)
@@ -297,7 +304,7 @@ namespace Weather2DataAccessLibrary.DataAccess
 
             for (int i = 4; i < dailyAverageArray.Length; i++)
             {
-                if (dailyAverageArray[i].AverageTemperature < startTemp &&   
+                if (dailyAverageArray[i].AverageTemperature < startTemp &&
                     dailyAverageArray[i - 1].AverageTemperature < startTemp &&
                     dailyAverageArray[i - 2].AverageTemperature < startTemp &&
                     dailyAverageArray[i - 3].AverageTemperature < startTemp &&
