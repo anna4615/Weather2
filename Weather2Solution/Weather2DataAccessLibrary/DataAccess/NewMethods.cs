@@ -151,7 +151,7 @@ namespace Weather2DataAccessLibrary.DataAccess
                         //}
 
 
-                        if (record.Time != null || record.SensorId != 0)  // Temperature och Humidity tillåter null men inte Time och SensorId
+                        if (record.Time != null && record.SensorId != 0)  // Temperature och Humidity tillåter null men inte Time och SensorId
                         {
                             context.Records.Add(record);
                         }
@@ -159,7 +159,7 @@ namespace Weather2DataAccessLibrary.DataAccess
                         // Här skulle man kunna ha en int som håller reda på hur många rader som inte kommer med, dvs saknar Time eller SensorId
                         //else
                         //{
-                        //    nuberOfFailedRecords++;
+                        //    numberOfFailedRecords++;
                         //}
                     }
                 }
