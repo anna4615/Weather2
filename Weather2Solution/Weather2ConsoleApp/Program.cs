@@ -55,13 +55,13 @@ namespace Weather2ConsoleApp
                         Sensor sensor = NewMethods.GetSensor(inOrOut);
                         DateTime date = SelectDate();
                         Console.Clear();
-                        Console.WriteLine("\nHämtar data...");
+                        Console.WriteLine("\nHämtar data...\n");
                         PrintAveragesForSelectedSensorAndDay(sensor, date);
                         break;
                     case 2:
                         Console.Clear();
                         inOrOut = SelectInOrOut();
-                        Console.WriteLine("\nHämtar data...");
+                        Console.WriteLine("Hämtar data...\n");
                         sensor = NewMethods.GetSensor(inOrOut);
                         PrintSortedDailyAverages(sensor);
                         break;
@@ -69,9 +69,9 @@ namespace Weather2ConsoleApp
                         Console.Clear();
                         Console.WriteLine("\nHämtar resultat för höst...");
                         sensor = NewMethods.GetSensor(6); // Sensor 6 är "Ute"
-                        PrintStartOfSeason(sensor, "Höst");
+                        PrintStartOfSeason(sensor, "Höst", 2016);
                         Console.WriteLine("Hämtar resultat för vinter...");
-                        PrintStartOfSeason(sensor, "Vinter");
+                        PrintStartOfSeason(sensor, "Vinter", 2016);
                         Console.WriteLine("Tryck på Enter för att komma till huvudmenyn");
                         Console.ReadLine();
                         break;
@@ -82,12 +82,12 @@ namespace Weather2ConsoleApp
                         break;
                     case 5:
                         Console.Clear();
-                        Console.WriteLine("\nHar börjat på GetTimeForOpenBalconyDoor() men har inte lyckats\n");                        
+                        Console.WriteLine("\nHar börjat så smått på GetTimeForOpenBalconyDoor() men den är inte klar\n");                        
                         Console.WriteLine("Tryck på Enter för att komma till huvudmenyn");
                         Console.ReadLine();
                         break;
                     case 6:
-                        Console.WriteLine("\nAvslutat");
+                        Console.WriteLine("Avslutat");
                         newSelection = false;
                         break;
                     default:
@@ -182,7 +182,7 @@ namespace Weather2ConsoleApp
 
             else
             {
-                Console.Write("Välj en dag under 2016 med formatet yyyy-mm-dd, bekräfta med Enter ");
+                Console.Write("Välj en dag under 2016 med formatet åååå-mm-dd, bekräfta med Enter ");
                 string selectedDay = Console.ReadLine();
 
                 while (true)
@@ -234,10 +234,10 @@ namespace Weather2ConsoleApp
                 })
                 .FirstOrDefault();
 
-            string heading = $"\nDygnsmedelvärden från sensor \"{sensor.SensorName}\" för valt datum";
+            string heading = $"Dygnsmedelvärden från sensor \"{sensor.SensorName}\" för valt datum";
 
             Console.Clear();
-            Console.WriteLine($"{heading}\n{Utils.GetUnderline(heading)}");
+            Console.WriteLine($"\n{heading}\n{Utils.GetUnderline(heading)}");
             Console.WriteLine($"Datum\t\tTemperatur (C)\tFuktighet (%)\tMögelrisk (%)");
             Console.Write($"{dailyAverages.day.ToShortDateString()}\t{Math.Round((decimal)dailyAverages.temp, 1)}\t\t" +
                 $"{Math.Round((decimal)dailyAverages.hum)}\t\t");
@@ -291,11 +291,13 @@ namespace Weather2ConsoleApp
 
                 if (sorton != Sortingselection.Quit)
                 {
+                    dailyAveragesList = dailyAveragesList
+                        .Where(a => a.temp != null && a.hum != null && a.fungusRisk != null);
 
                     string heading = GetHeadingForSortedList(sorton, sensor.SensorName);
 
                     Console.Clear();
-                    Console.WriteLine($"n{heading}\n{Utils.GetUnderline(heading)}");
+                    Console.WriteLine($"\n{heading}\n{Utils.GetUnderline(heading)}");
                     Console.WriteLine($"Visar resultat för {dailyAveragesList.Count()} dygn.\n");
                     Console.WriteLine("Tryck Enter för att göra ett nytt sorteringsval\n");
                     Console.WriteLine($"Datum\t\tTemperatur (C)\tFuktighet (%)\tMögelrisk (%)");
@@ -305,8 +307,6 @@ namespace Weather2ConsoleApp
                         Console.Write($"{item.day.ToShortDateString()}\t{Math.Round((decimal)item.temp, 1)}\t\t{Math.Round((decimal)item.hum)}\t\t");
                         Console.WriteLine(item.fungusRisk > 0 ? $"{Math.Round((decimal)item.fungusRisk)}" : "0");
                     }
-
-
 
                     Utils.ScrollToTop(dailyAveragesList.Count() + 5);
                     Console.Clear();
@@ -338,7 +338,7 @@ namespace Weather2ConsoleApp
 
             Console.WriteLine($"\n{heading}\n{Utils.GetUnderline(heading)}\n" +
                 "1. Datum, tidigt till sent.\n" +
-                "2. Temperatur, varmast till kallast." +
+                "2. Temperatur, varmast till kallast.\n" +
                 "3. Fuktighet, torrast till fuktigast.\n" +
                 "4. Risk för mögel, högst till lägst risk.\n" +
                 "5. Huvudmeny.\n");
@@ -378,11 +378,11 @@ namespace Weather2ConsoleApp
         // - Kan starta tidigast 1:a augusti
 
         // Det finns inte data för alla dagar, kollar 5 dagar tillbaka av de som har data
-        static void PrintStartOfSeason(Sensor sensor, string season)
+        static void PrintStartOfSeason(Sensor sensor, string season, int year)
         {
             List<Record> records = NewMethods.GetRecordsForSensor(sensor);
 
-            DateTime earliestStart = new DateTime(2016, 8, 1);
+            DateTime earliestStart = new DateTime(year, 8, 1);
 
             var dailyAveragesArray = records
                .GroupBy(r => r.Time.Date)
@@ -428,11 +428,9 @@ namespace Weather2ConsoleApp
 
             string printString = seasonStart != default ?
                    $"\n{season} blev det {seasonStart.ToShortDateString()}.\n" :
-                   $"\nDet blev inte {season.ToLower()} innan 2016 års slut.\n";
+                   $"\nDet blev inte {season.ToLower()} innan {year} års slut.\n";
 
             Console.WriteLine(printString);
-
-
         }
 
         public static double? GetFungusRisk(double? temp, double? humidity)
@@ -500,8 +498,13 @@ namespace Weather2ConsoleApp
                     outsideTemp = outsideDailyTemp
                         .Where(outside => outside.day.Date == inside.day.Date)
                         .FirstOrDefault()
-                        .temp
+                        .temp,
+                    diff = inside.temp - (outsideDailyTemp
+                        .Where(outside => outside.day.Date == inside.day.Date)
+                        .FirstOrDefault()
+                        .temp)
                 })
+                .Where(a => a.insideTemp != null && a.outsideTemp != null)
                 .OrderByDescending(a => a.insideTemp - a.outsideTemp)
                 .ToList();
 
@@ -510,12 +513,8 @@ namespace Weather2ConsoleApp
 
             foreach (var item in differenceList)
             {
-                double? tempDiff = item.insideTemp - item.outsideTemp;
-
-                table += $"{item.day.ToShortDateString()}\t";
-                table += item.insideTemp != null ? $"{Math.Round((double)item.insideTemp, 1)}\t" : $"*\t";
-                table += item.outsideTemp != null ? $"{Math.Round((double)item.outsideTemp, 1)}\t" : $"*\t";
-                table += tempDiff != null ? $"{Math.Round((double)tempDiff, 1)}\n" : $"*\n";
+                table += $"{item.day.ToShortDateString()}\t{Math.Round((double)item.insideTemp, 1)}\t" +
+                    $"{Math.Round((double)item.outsideTemp, 1)}\t{Math.Round((double)item.diff, 1)}\n";
             }
 
             string heading = "\nDygnsmedeltemperaturer och skillnad mellan inne och ute, sorterat på skillnad";
@@ -539,7 +538,6 @@ namespace Weather2ConsoleApp
             // Sedan omvänt för att hitta tid när dörren stängs
 
             // Har startat lite men inte fått det klart
-
 
             Sensor insideSensor = NewMethods.GetSensor(insideSensorId);
 

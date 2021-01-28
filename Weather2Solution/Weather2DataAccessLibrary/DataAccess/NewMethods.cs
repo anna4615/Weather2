@@ -72,8 +72,7 @@ namespace Weather2DataAccessLibrary.DataAccess
                     string[] values = line.Split(',');
                     // [0]:Time [1]:Inne/Ute = SensorName [2]:Temp [3]:Humidity
 
-                    if (sensors.Count() == 0 ||
-                        sensors.Where(s => s.SensorName == values[1]).Count() == 0)
+                    if (sensors.Where(s => s.SensorName == values[1]).Count() == 0)
                     {
                         Sensor newSensor = new Sensor();
                         newSensor.SensorName = values[1];
@@ -104,7 +103,7 @@ namespace Weather2DataAccessLibrary.DataAccess
 
         public static int LoadData(string[] fileContent)
         {
-            int records = 0;
+            int numberOfRecords = 0;
 
             using (Weather2Context context = new Weather2Context())
             {
@@ -115,34 +114,60 @@ namespace Weather2DataAccessLibrary.DataAccess
 
                     foreach (string line in fileContent)
                     {
-                        string[] values = line.Split(',');
                         // [0]:Time [1]:Inne/Ute = SensorName [2]:Temp [3]:Humidity
+                        string[] values = line.Split(',');
 
                         Record record = new Record();
 
                         record.SensorId = sensors.FirstOrDefault(s => s.SensorName == values[1]).Id; // Kollade först mot context för varja avläsning men det tog väldigt lång tid
 
                         if (DateTime.TryParse(values[0], out DateTime time))
+                        {
                             record.Time = time;
+                        }
 
+                        // Hade först problem med minustecken och decimaltecken, det löstes av NumberStyles och CultureInfo
                         if (double.TryParse(values[2], NumberStyles.AllowLeadingSign | NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture, out double temp))
+                        {
                             record.Temperature = temp;
+                        }
+
+                        // Här skulle man kunna ha en int som håller reda på hur många värden som inte kommer med, dvs har fel format
+                        //else
+                        //{
+                        //    nuberOfFailedTemperature++;
+                        //}
+
 
                         if (int.TryParse(values[3], out int humidity))
+                        {
                             record.Humidity = humidity;
+                        }
+
+                        // Här skulle man kunna ha en int som håller reda på hur många värden som inte kommer med, dvs har fel format
+                        //else
+                        //{
+                        //    nuberOfFailedHumidity++;
+                        //}
 
 
-                        if (record.Time != null || record.SensorId != 0)
+                        if (record.Time != null || record.SensorId != 0)  // Temperature och Humidity tillåter null men inte Time och SensorId
                         {
                             context.Records.Add(record);
                         }
+
+                        // Här skulle man kunna ha en int som håller reda på hur många rader som inte kommer med, dvs saknar Time eller SensorId
+                        //else
+                        //{
+                        //    nuberOfFailedRecords++;
+                        //}
                     }
                 }
 
-                records = context.SaveChanges();
+                numberOfRecords = context.SaveChanges();
             }
 
-            return records;
+            return numberOfRecords;
         }
 
         public static int GetNumberOfRecordsForSensor(Sensor sensor)
