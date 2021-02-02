@@ -390,9 +390,7 @@ namespace Weather2ConsoleApp
                .Select(g => new
                {
                    day = g.Key,
-                   temp = g.Average(r => r.Temperature),
-                   hum = g.Average(r => r.Humidity),
-                   fungusRisk = GetFungusRisk(g.Average(r => r.Temperature), g.Average(r => r.Humidity))
+                   temp = g.Average(r => r.Temperature)
                })
                .OrderBy(a => a.day)
                .ToArray();

@@ -135,7 +135,7 @@ namespace Weather2DataAccessLibrary.DataAccess
                         // Här skulle man kunna ha en int som håller reda på hur många värden som inte kommer med, dvs har fel format
                         //else
                         //{
-                        //    nuberOfFailedTemperature++;
+                        //    numberOfFailedTemperature++;
                         //}
 
 
@@ -147,7 +147,7 @@ namespace Weather2DataAccessLibrary.DataAccess
                         // Här skulle man kunna ha en int som håller reda på hur många värden som inte kommer med, dvs har fel format
                         //else
                         //{
-                        //    nuberOfFailedHumidity++;
+                        //    numberOfFailedHumidity++;
                         //}
 
 
